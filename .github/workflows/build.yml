@@ -19,7 +19,7 @@ jobs:
           sudo apt-get install -y -qq build-essential autoconf automake bison flex gawk \
             libtool libtool-bin libncurses-dev curl file git gperf help2man texinfo \
             unzip wget file xz-utils meson python3-pip ninja-build \
-            gcc-arm-linux-gnueabi g++-arm-linux-gnueabi libc6-dev-i386
+            gcc-arm-linux-gnueabi g++-arm-linux-gnueabi
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,21 +27,26 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
+      - name: Create gcc wrapper (strip -m32 for 64-bit host)
+        run: |
+          sudo mkdir -p /usr/local/gcc-wrapper
+          printf '#!/bin/bash\nargs=()\nfor a in "$@"; do\n  [ "$a" != "-m32" ] && args+=("$a")\ndone\nexec /usr/bin/gcc "${args[@]}"\n' | sudo tee /usr/local/gcc-wrapper/gcc > /dev/null
+          sudo chmod +x /usr/local/gcc-wrapper/gcc
+          sudo ln -sf /usr/local/gcc-wrapper/gcc /usr/local/gcc-wrapper/cc
+          PATH="/usr/local/gcc-wrapper:$PATH" gcc -m32 --version
+
       - name: Setup cross-compiler symlinks for PocketBook
         run: |
-          # Create symlinks so the build finds arm-pocketbook-linux-gnueabi-*
           sudo mkdir -p /usr/local/arm-pb/bin
           for tool in gcc g++ cpp ar as ld nm objcopy objdump ranlib readelf strip; do
             sudo ln -sf "/usr/bin/arm-linux-gnueabi-$tool" "/usr/local/arm-pb/bin/arm-pocketbook-linux-gnueabi-$tool"
           done
-          # Verify
           PATH="/usr/local/arm-pb/bin:$PATH" arm-pocketbook-linux-gnueabi-gcc --version
           PATH="/usr/local/arm-pb/bin:$PATH" arm-pocketbook-linux-gnueabi-ranlib --version
 
       - name: Patch architecture flags (ARMv6 for Pro 902)
         run: |
           cd base
-          # Replace ARMv7 NEON arch with ARMv6
           sed -i 's/ARMV7_A8_ARCH/ARMV6_1136_ARCH/' Makefile.defs
           grep -B2 -A2 'TARGET.*pocketbook' Makefile.defs
           cd ..
@@ -55,7 +60,7 @@ jobs:
         run: make TARGET=pocketbook base
         env:
           MAKEFLAGS: OUTPUT_DIR=build INSTALL_DIR=install PARALLEL_JOBS=2
-          PATH: /usr/local/arm-pb/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+          PATH: /usr/local/gcc-wrapper:/usr/local/arm-pb/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
       - name: Package update
         run: make TARGET=pocketbook update
