@@ -47,7 +47,7 @@ jobs:
           for tool in gcc g++ cpp ar as ld nm objcopy objdump ranlib readelf strip; do
             src="${PREFIX}/bin/arm-linux-gnueabi-${tool}"
             [ -f "${src}" ] || src="/usr/bin/arm-linux-gnueabi-${tool}"
-            [ -f "${src}" ] || src="/usr/bin/arm-linux-gnueabi-${tool}-*"
+            [ -f "${src}" ] || src="/usr/bin/arm-linux-gnueabi-${tool}-11"
             actual=$(ls ${src} 2>/dev/null | head -1)
             if [ -n "$actual" ]; then
               sudo ln -sf "$actual" "/usr/local/arm-pb/bin/arm-pocketbook-linux-gnueabi-${tool}"
@@ -55,6 +55,21 @@ jobs:
               echo "WARNING: ${tool} not found"
             fi
           done
+          # Also create gcc-ar and gcc-ranlib for cmake LTO support
+          for variant in gcc-ar gcc-ranlib; do
+            for ver_src in \
+              "${PREFIX}/bin/arm-linux-gnueabi-${variant}-11" \
+              "${PREFIX}/bin/arm-linux-gnueabi-${variant}" \
+              "/usr/bin/arm-linux-gnueabi-${variant}-11" \
+              "/usr/bin/arm-linux-gnueabi-${variant}"; do
+              [ -f "$ver_src" ] && { sudo ln -sf "$ver_src" "/usr/local/arm-pb/bin/arm-pocketbook-linux-gnueabi-${variant}"; break; }
+            done
+          done
+          # Fallback: if gcc-ar not available, use regular ar/ranlib
+          [ -f "/usr/local/arm-pb/bin/arm-pocketbook-linux-gnueabi-gcc-ar" ] || \
+            sudo ln -sf "/usr/local/arm-pb/bin/arm-pocketbook-linux-gnueabi-ar" "/usr/local/arm-pb/bin/arm-pocketbook-linux-gnueabi-gcc-ar"
+          [ -f "/usr/local/arm-pb/bin/arm-pocketbook-linux-gnueabi-gcc-ranlib" ] || \
+            sudo ln -sf "/usr/local/arm-pb/bin/arm-pocketbook-linux-gnueabi-ranlib" "/usr/local/arm-pb/bin/arm-pocketbook-linux-gnueabi-gcc-ranlib"
           PATH="/usr/local/arm-pb/bin:$PATH" arm-pocketbook-linux-gnueabi-gcc --version
           PATH="/usr/local/arm-pb/bin:$PATH" arm-pocketbook-linux-gnueabi-ranlib --version
 
