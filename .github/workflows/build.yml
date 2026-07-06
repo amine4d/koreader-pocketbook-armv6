@@ -29,15 +29,14 @@ jobs:
 
       - name: Setup cross-compiler symlinks for PocketBook
         run: |
-          # Create symlinks so the build finds arm-pocketbook-linux-gnueabi-gcc
+          # Create symlinks so the build finds arm-pocketbook-linux-gnueabi-*
           sudo mkdir -p /usr/local/arm-pb/bin
-          sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc /usr/local/arm-pb/bin/arm-pocketbook-linux-gnueabi-gcc
-          sudo ln -sf /usr/bin/arm-linux-gnueabi-g++ /usr/local/arm-pb/bin/arm-pocketbook-linux-gnueabi-g++
-          sudo ln -sf /usr/bin/arm-linux-gnueabi-ar /usr/local/arm-pb/bin/arm-pocketbook-linux-gnueabi-ar
-          sudo ln -sf /usr/bin/arm-linux-gnueabi-ld /usr/local/arm-pb/bin/arm-pocketbook-linux-gnueabi-ld
-          sudo ln -sf /usr/bin/arm-linux-gnueabi-strip /usr/local/arm-pb/bin/arm-pocketbook-linux-gnueabi-strip
+          for tool in gcc g++ cpp ar as ld nm objcopy objdump ranlib readelf strip; do
+            sudo ln -sf "/usr/bin/arm-linux-gnueabi-$tool" "/usr/local/arm-pb/bin/arm-pocketbook-linux-gnueabi-$tool"
+          done
           # Verify
           PATH="/usr/local/arm-pb/bin:$PATH" arm-pocketbook-linux-gnueabi-gcc --version
+          PATH="/usr/local/arm-pb/bin:$PATH" arm-pocketbook-linux-gnueabi-ranlib --version
 
       - name: Patch architecture flags (ARMv6 for Pro 902)
         run: |
