@@ -34,8 +34,24 @@ jobs:
       - name: Setup cross-compiler symlinks for PocketBook
         run: |
           sudo mkdir -p /usr/local/arm-pb/bin
+          # Find the actual ARM cross-compiler (versioned or unversioned)
+          GCC_BIN=$(ls /usr/bin/arm-linux-gnueabi-gcc* 2>/dev/null | head -1)
+          PREFIX="${GCC_BIN%/gcc*}"
+          if [ -z "$GCC_BIN" ]; then
+            echo "ARM cross-compiler not found!"
+            ls /usr/bin/arm-linux-gnueabi-* 2>/dev/null || echo "No arm-linux-gnueabi-* tools found"
+            exit 1
+          fi
           for tool in gcc g++ cpp ar as ld nm objcopy objdump ranlib readelf strip; do
-            sudo ln -sf "/usr/bin/arm-linux-gnueabi-$tool" "/usr/local/arm-pb/bin/arm-pocketbook-linux-gnueabi-$tool"
+            src="${PREFIX}/bin/arm-linux-gnueabi-${tool}"
+            [ -f "${src}" ] || src="/usr/bin/arm-linux-gnueabi-${tool}"
+            [ -f "${src}" ] || src="/usr/bin/arm-linux-gnueabi-${tool}-*"
+            actual=$(ls ${src} 2>/dev/null | head -1)
+            if [ -n "$actual" ]; then
+              sudo ln -sf "$actual" "/usr/local/arm-pb/bin/arm-pocketbook-linux-gnueabi-${tool}"
+            else
+              echo "WARNING: ${tool} not found"
+            fi
           done
           PATH="/usr/local/arm-pb/bin:$PATH" arm-pocketbook-linux-gnueabi-gcc --version
           PATH="/usr/local/arm-pb/bin:$PATH" arm-pocketbook-linux-gnueabi-ranlib --version
