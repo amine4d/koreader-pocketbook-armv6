@@ -19,7 +19,7 @@ jobs:
           sudo apt-get install -y -qq build-essential autoconf automake bison flex gawk \
             libtool libtool-bin libncurses-dev curl file git gperf help2man texinfo \
             unzip wget file xz-utils meson python3-pip ninja-build \
-            gcc-arm-linux-gnueabi g++-arm-linux-gnueabi gcc-multilib
+            gcc-arm-linux-gnueabi g++-arm-linux-gnueabi libc6-dev-i386
 
       - name: Checkout
         uses: actions/checkout@v4
