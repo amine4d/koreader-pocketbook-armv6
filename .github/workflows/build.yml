@@ -19,13 +19,15 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq build-essential autoconf automake bison flex gawk \
             libtool libtool-bin libncurses-dev curl file git gperf help2man texinfo \
-            unzip wget file xz-utils meson python3-pip ninja-build \
+            unzip wget file xz-utils python3-pip ninja-build \
             gcc-arm-linux-gnueabi g++-arm-linux-gnueabi \
             libc6-dev-i386 gcc-multilib g++-multilib 2>&1 || \
           sudo apt-get install -y -qq \
             libc6-dev-i386 lib32gcc-s1 lib32stdc++6 lib32z1 libc6-i386 \
             gcc-arm-linux-gnueabi g++-arm-linux-gnueabi \
-            meson ninja-build python3-pip linux-libc-dev:i386
+            ninja-build python3-pip linux-libc-dev:i386
+          # Meson from apt is too old for glib 2.82; install latest via pip
+          pip3 install 'meson>=1.2.0'
 
       - name: Checkout
         uses: actions/checkout@v4
