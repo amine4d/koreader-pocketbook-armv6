@@ -3,7 +3,7 @@ name: Build PocketBook ARMv6
 on:
   workflow_dispatch:
   push:
-    branches: [armv6-fix]
+    branches: [armv6-fix, master]
 
 permissions:
   contents: write
@@ -12,20 +12,28 @@ jobs:
   build-pocketbook:
     runs-on: ubuntu-22.04
     container:
-      image: koreader/kobase:1.0.0-22.04
+      image: ghcr.io/koreader/koxtoolchain:pocketbook-2021.12
       options: --user root
 
     steps:
       - name: Install deps
         run: |
           apt-get update -qq
-          apt-get install -y -qq git file xz-utils
+          apt-get install -y -qq git file xz-utils sudo
 
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
+
+      - name: Setup toolchain environment
+        run: |
+          # Source the koxtoolchain environment setup
+          . /home/kox/koxtoolchain/refs/x-compile.sh pocketbook env
+          # Verify compiler is available
+          which arm-pocketbook-linux-gnueabi-gcc || echo "gcc not in PATH yet"
+          arm-pocketbook-linux-gnueabi-gcc --version || echo "need to set PATH"
 
       - name: Patch architecture for ARMv6 (PocketBook Pro 902)
         run: |
@@ -41,12 +49,17 @@ jobs:
           make fetchthirdparty
 
       - name: Build base
-        run: make TARGET=pocketbook base
+        run: |
+          # Source toolchain and build
+          . /home/kox/koxtoolchain/refs/x-compile.sh pocketbook env
+          make TARGET=pocketbook base
         env:
           MAKEFLAGS: OUTPUT_DIR=build INSTALL_DIR=install PARALLEL_JOBS=2
 
       - name: Package update
-        run: make TARGET=pocketbook update
+        run: |
+          . /home/kox/koxtoolchain/refs/x-compile.sh pocketbook env
+          make TARGET=pocketbook update
 
       - name: List artifacts
         run: ls -la koreader-pocketbook-*.zip koreader-pocketbook-*.tar.xz 2>/dev/null || echo "No artifacts found"
