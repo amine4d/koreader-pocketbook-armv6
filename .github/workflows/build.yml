@@ -11,15 +11,31 @@ permissions:
 jobs:
   build-pocketbook:
     runs-on: ubuntu-22.04
-    container:
-      image: ghcr.io/koreader/koxtoolchain:pocketbook-2021.12
-      options: --user root
 
     steps:
       - name: Install deps
         run: |
-          apt-get update -qq
-          apt-get install -y -qq git file xz-utils sudo
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential autoconf automake bison flex gawk \
+            libtool libtool-bin libncurses-dev curl file git gperf help2man texinfo \
+            unzip wget file xz-utils
+
+      - name: Restore cached toolchain
+        id: cache-tc
+        uses: actions/cache@v4
+        with:
+          path: ~/x-tools
+          key: pocketbook-toolchain-v3
+
+      - name: Build PocketBook toolchain
+        if: steps.cache-tc.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 https://github.com/NiLuJe/koxtoolchain.git /tmp/koxtoolchain
+          cd /tmp/koxtoolchain
+          ./gen-tc.sh pocketbook
+          echo "=== Toolchain built ==="
+          ls ~/x-tools/arm-pocketbook-linux-gnueabi/bin/
+          ~/x-tools/arm-pocketbook-linux-gnueabi/bin/arm-pocketbook-linux-gnueabi-gcc --version
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,20 +43,11 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Setup toolchain environment
+      - name: Patch architecture flags (ARMv6 for Pro 902)
         run: |
-          # Source the koxtoolchain environment setup
-          . /home/kox/koxtoolchain/refs/x-compile.sh pocketbook env
-          # Verify compiler is available
-          which arm-pocketbook-linux-gnueabi-gcc || echo "gcc not in PATH yet"
-          arm-pocketbook-linux-gnueabi-gcc --version || echo "need to set PATH"
-
-      - name: Patch architecture for ARMv6 (PocketBook Pro 902)
-        run: |
-          set -x
           cd base
           sed -i 's/ARMV7_A8_ARCH/ARMV6_1136_ARCH/' Makefile.defs
-          grep -B2 -A2 'TARGET.*pocketbook' Makefile.defs || true
+          grep -B2 -A2 'TARGET.*pocketbook' Makefile.defs
           cd ..
 
       - name: Fetch thirdparty
@@ -50,15 +57,14 @@ jobs:
 
       - name: Build base
         run: |
-          # Source toolchain and build
-          . /home/kox/koxtoolchain/refs/x-compile.sh pocketbook env
+          export PATH="$HOME/x-tools/arm-pocketbook-linux-gnueabi/bin:$PATH"
           make TARGET=pocketbook base
         env:
           MAKEFLAGS: OUTPUT_DIR=build INSTALL_DIR=install PARALLEL_JOBS=2
 
       - name: Package update
         run: |
-          . /home/kox/koxtoolchain/refs/x-compile.sh pocketbook env
+          export PATH="$HOME/x-tools/arm-pocketbook-linux-gnueabi/bin:$PATH"
           make TARGET=pocketbook update
 
       - name: List artifacts
