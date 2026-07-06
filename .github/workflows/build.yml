@@ -26,8 +26,9 @@ jobs:
             libc6-dev-i386 lib32gcc-s1 lib32stdc++6 lib32z1 libc6-i386 \
             gcc-arm-linux-gnueabi g++-arm-linux-gnueabi \
             ninja-build python3-pip linux-libc-dev:i386
-          # Meson from apt is too old for glib 2.82; install latest via pip
-          pip3 install 'meson>=1.2.0'
+          # Meson from apt is too old for glib 2.82; install latest via pip system-wide
+          sudo pip3 install 'meson>=1.2.0'
+          meson --version
 
       - name: Checkout
         uses: actions/checkout@v4
